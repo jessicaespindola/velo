@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Package, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Search, Package, CheckCircle, XCircle, Loader2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,15 +42,13 @@ const OrderLookup = () => {
   const [notFound, setNotFound] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSearch = async (e: React.FormEvent) => { //função para buscar o pedido atraves da outra função getOrderByNumber
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setNotFound(false);
     setSearchedOrder(null);
     setIsLoading(true);
     
     const { order, error } = await getOrderByNumber(orderId);
-    // getOrderByNumber é a função externa importada de hooks/useOrders.ts
-    // orderId é a constante que armazena o valor do input de número do pedido atraves de setOrderId que é invocado quando tem mudança no campo
     
     setIsLoading(false);
     
@@ -60,7 +58,7 @@ const OrderLookup = () => {
     }
     
     if (order) {
-      setSearchedOrder(order);
+      setSearchedOrder(order);      
     } else {
       setNotFound(true);
     }
@@ -89,7 +87,7 @@ const OrderLookup = () => {
                 <Input
                   type="text"
                   id="order-id"
-                  placeholder="Ex: VLO-ABC123"
+                  placeholder="Ex: VLO-ABCD10"
                   value={orderId}
                   onChange={(e) => setOrderId(e.target.value)}
                   className="mt-1"
@@ -133,7 +131,7 @@ const OrderLookup = () => {
 
         {/* Order Result */}
         {searchedOrder && (
-          <Card className="animate-fade-in">
+          <Card className="animate-fade-in" data-testid={`order-result-${searchedOrder.id}`}>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -146,16 +144,21 @@ const OrderLookup = () => {
                   </div>
                 </div>
                 <div
+                  role="status"
                   className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
                     searchedOrder.status === 'APROVADO'
                       ? 'bg-green-100 text-green-700'
-                      : 'bg-red-100 text-red-700'
+                      : searchedOrder.status === 'REPROVADO'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-amber-100 text-amber-700'
                   }`}
                 >
                   {searchedOrder.status === 'APROVADO' ? (
                     <CheckCircle className="w-4 h-4" />
-                  ) : (
+                  ) : searchedOrder.status === 'REPROVADO' ? (
                     <XCircle className="w-4 h-4" />
+                  ) : (
+                    <Clock className="w-4 h-4" />
                   )}
                   {searchedOrder.status}
                 </div>
