@@ -1,28 +1,13 @@
-import { test } from '@playwright/test'
+import { test } from '../support/fixtures'
 import { generateOrderCode } from '../support/helpers'
-import { Navbar } from '../support/components/Navbar'
-import { LandingPage } from '../support/pages/LandingPage'
-import { OrderLockupPage, OrderDetails } from '../support/pages/OrderLockupPage'
-
-
-// AAA - Arrange, Act, Assert(melhor padrão de automação) - Preparar, Agir, Assertar/verificar
+import type { OrderDetails } from '../support/actions/orderLookupActions'
 
 test.describe('Consulta de Pedidos', () => {
-
-  let orderLockupPage: OrderLockupPage
-
-
-  test.beforeEach(async ({ page }) => {
-    await new LandingPage(page).goto()
-    await new Navbar(page).orderLookupLink()
-    console.log('beforeEach: roda antes de cada teste')
-
-    orderLockupPage = new OrderLockupPage(page)
-    orderLockupPage.validatePageLoaded()
-
+  test.beforeEach(async ({ app }) => {
+    await app.orderLookup.open()
   })
 
-  test('deve consultar um pedido aprovado', async ({ page }) => {
+  test('deve consultar um pedido aprovado', async ({ app }) => {
     const order: OrderDetails = {
       number: 'VLO-P3PW2P',
       status: 'APROVADO',
@@ -30,19 +15,17 @@ test.describe('Consulta de Pedidos', () => {
       wheels: 'aero Wheels',
       customer: {
         name: 'JESSICA DA SILVA',
-        email: 'jessicaespindoladasilva5@gmail.com'
+        email: 'jessicaespindoladasilva5@gmail.com',
       },
-      payment: 'À Vista'
+      payment: 'À Vista',
     }
 
-    await orderLockupPage.searchOrder(order.number)
-
-    await orderLockupPage.validateOrderDetails(order)
-    await orderLockupPage.validateStatusBadge(order.status)
-
+    await app.orderLookup.searchOrder(order.number)
+    await app.orderLookup.validateOrderDetails(order)
+    await app.orderLookup.validateStatusBadge(order.status)
   })
 
-  test('deve consultar um pedido reprovado', async ({ page }) => {
+  test('deve consultar um pedido reprovado', async ({ app }) => {
     const order: OrderDetails = {
       number: 'VLO-E3P5Z3',
       status: 'REPROVADO',
@@ -50,18 +33,17 @@ test.describe('Consulta de Pedidos', () => {
       wheels: 'sport Wheels',
       customer: {
         name: 'Adamastor Limas',
-        email: 'ada@gmail.com'
+        email: 'ada@gmail.com',
       },
-      payment: 'À Vista'
+      payment: 'À Vista',
     }
- 
-    await orderLockupPage.searchOrder(order.number)
 
-    await orderLockupPage.validateOrderDetails(order)
-    await orderLockupPage.validateStatusBadge(order.status)
+    await app.orderLookup.searchOrder(order.number)
+    await app.orderLookup.validateOrderDetails(order)
+    await app.orderLookup.validateStatusBadge(order.status)
   })
 
-  test('deve consultar um pedido em análise', async ({ page }) => {
+  test('deve consultar um pedido em análise', async ({ app }) => {
     const order: OrderDetails = {
       number: 'VLO-MF81FS',
       status: 'EM_ANALISE',
@@ -69,35 +51,27 @@ test.describe('Consulta de Pedidos', () => {
       wheels: 'aero Wheels',
       customer: {
         name: 'Paola Alcântara',
-        email: 'paolaalc@gmail.com'
+        email: 'paolaalc@gmail.com',
       },
-      payment: 'À Vista'
+      payment: 'À Vista',
     }
 
-    await orderLockupPage.searchOrder(order.number)
-
-    await orderLockupPage.validateOrderDetails(order)
-    await orderLockupPage.validateStatusBadge(order.status)
+    await app.orderLookup.searchOrder(order.number)
+    await app.orderLookup.validateOrderDetails(order)
+    await app.orderLookup.validateStatusBadge(order.status)
   })
 
+  test('deve exibir mensagem quando o pedido não é encontrado', async ({ app }) => {
+    const order = generateOrderCode()
 
-  test('deve exibir mensagem quando o pedido não é encontrado', async ({ page }) => {
-    const order = generateOrderCode() 
-
-    await orderLockupPage.searchOrder(order)
-    await orderLockupPage.validateOrderNotFound()
-
+    await app.orderLookup.searchOrder(order)
+    await app.orderLookup.validateOrderNotFound()
   })
 
-  test('deve exibir mensagem quando o código do pedido está fora do padrão', async ({ page }) => {
-
+  test('deve exibir mensagem quando o código do pedido está fora do padrão', async ({ app }) => {
     const orderCode = 'XYZ1233-INVALID'
 
-    await orderLockupPage.searchOrder(orderCode)
-    await orderLockupPage.validateOrderNotFound()
-
+    await app.orderLookup.searchOrder(orderCode)
+    await app.orderLookup.validateOrderNotFound()
   })
 })
-
-
-
