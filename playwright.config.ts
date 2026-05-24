@@ -13,12 +13,12 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   //tempo máximo para a execução de cada teste completo
-  timeout: 60_000, 
+  timeout: 60_000,
 
   //tempo máximo para asserções(toBeVisible(), toHaveText()
   //sempre deixar aqui como 5segundos, e colocar um tempo maior se for necessário no passo da spec específica{timeout:10_000}- timeout explícito
-  expect:{
-    timeout: 5000 
+  expect: {
+    timeout: 5000
   },
   testDir: './playwright/e2e',
   /* Run tests in files in parallel */
@@ -34,22 +34,18 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('')`. */
-    // baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:5173',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'retain-on-failure',
 
     // quando zerado, pega o valor definido no timeout de cima.
     // Tempo máximo para ações interativas como click(), fill()
-    actionTimeout: 5_000, 
-
-
-
+    actionTimeout: 5_000,
 
     // Tempo máximo para navegações como goto(), waitforURL()
     // quando zerado, pega o valor definido no timeout de cima.
     navigationTimeout: 10_000
-
   },
 
   /* Configure projects for major browsers */
@@ -59,15 +55,15 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
 
-   /*  {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    }, */
+    /*  {
+       name: 'firefox',
+       use: { ...devices['Desktop Firefox'] },
+     },
+ 
+     {
+       name: 'webkit',
+       use: { ...devices['Desktop Safari'] },
+     }, */
 
     /* Test against mobile viewports. */
     // {
