@@ -4,9 +4,13 @@ import { defineConfig, devices } from '@playwright/test';
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
  */
-// import dotenv from 'dotenv';
-// import path from 'path';
-// dotenv.config({ path: path.resolve(__dirname, '.env') });
+ import dotenv from 'dotenv';
+ import path from 'path';
+ import { fileURLToPath } from 'url';
+
+ const __filename = fileURLToPath(import.meta.url);
+ const __dirname = path.dirname(__filename);
+ dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -18,7 +22,7 @@ export default defineConfig({
   //tempo máximo para asserções(toBeVisible(), toHaveText()
   //sempre deixar aqui como 5segundos, e colocar um tempo maior se for necessário no passo da spec específica{timeout:10_000}- timeout explícito
   expect: {
-    timeout: 5000
+    timeout: 5_000
   },
   testDir: './playwright/e2e',
   /* Run tests in files in parallel */
