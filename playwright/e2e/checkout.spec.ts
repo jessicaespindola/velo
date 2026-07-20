@@ -3,7 +3,7 @@ import { deleteOrdersByCustomerEmail } from '../support/database/orderRepository
 
 
 test.describe('Checkout', () => {
- 
+
 
   test.describe('Validações de campos obrigatórios', () => {
 
@@ -173,6 +173,102 @@ test.describe('Checkout', () => {
         store: 'Velô Paulista - Av. Paulista, 1000',
         total,
       })
+    })
+
+    test('deve aprovar automaticamente o crédito quando o score do CPF for maior que 700 no financiamento', async ({ page, app }) => {
+      const customer = {
+        name: 'Jeremias',
+        lastname: 'Alcântara',
+        email: 'jeremias.alcantara@email.com',
+        phone: '(11) 97777-6666',
+        document: '293.655.810-79',
+        payment: 'Financiamento',
+      }
+      const store = 'Velô Paulista'
+      const total = 'R$ 40.000,00'
+
+      // Arrange
+      await deleteOrdersByCustomerEmail(customer.email) //deletar pedidos de execuções anteriores
+
+      //listener - um ouvinte para a requisição
+      // é consumido após o submit ser enviado para a API
+      await page.route('**/functions/v1/credit-analysis', async route => {
+        return route.fulfill({ // troca o valor que é retornado pela requisição, não traz o score real
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            status: 'Done',
+            score: 710
+          }),
+        })
+      })
+
+      await page.goto('/')
+      await page.getByRole('link', { name: /Configure Agora/i }).click()
+
+     // await app.configurator.selectColor('Glacier Blue')
+     // await app.configurator.selectWheels(/Aero Wheels/)
+      await app.configurator.expectPrice(total)
+      await app.configurator.finishConfigurator()
+      await app.checkout.expectLoaded()
+
+      await app.checkout.fillCustomerData(customer)
+      await app.checkout.selectStore(store)
+      
+      await app.checkout.selectFinancedPayment()
+      await app.checkout.acceptTerms()
+      await app.checkout.submit()
+    })
+
+    test('deve encaminhar para análise quando o score do CPF estiver entre 501 e 700 no financiamento', async ({ page, app }) => {
+      const customer = {
+        name: 'Marina',
+        lastname: 'Oliveira',
+        email: 'marina.oliveira@email.com',
+        phone: '(11) 96666-5555',
+        document: '866.616.580-45',
+        payment: 'Financiamento',
+      }
+      const store = 'Velô Paulista'
+      const total = 'R$ 40.000,00'
+
+      // Arrange
+      await deleteOrdersByCustomerEmail(customer.email)
+
+      await page.route('**/functions/v1/credit-analysis', async route => {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            status: 'Done',
+            score: 600,
+          }),
+        })
+      })
+
+      await page.goto('/')
+      await page.getByRole('link', { name: /Configure Agora/i }).click()
+
+      await app.configurator.expectPrice(total)
+      await app.configurator.finishConfigurator()
+      await app.checkout.expectLoaded()
+
+      await app.checkout.fillCustomerData(customer)
+      await app.checkout.selectStore(store)
+      await app.checkout.selectFinancedPayment()
+      await app.checkout.acceptTerms()
+
+      // Act
+      await app.checkout.submit()
+
+      // Assert
+      await expect(page).toHaveURL(/\/success/)
+      const orderId = await page.getByTestId('order-id').textContent()
+      expect(orderId).toMatch(/^VLO-[A-Z0-9]{6}$/)
+
+      await page.getByTestId('goto-consultar').click()
+      await app.orderLookup.searchOrder(orderId!)
+      await app.orderLookup.validateStatusBadge('EM_ANALISE')
     })
   })
 })
