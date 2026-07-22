@@ -1,70 +1,101 @@
-import { describe, it, expect } from 'vitest';
-import {
-  calculateTotalPrice,
-  calculateInstallment,
-  formatPrice,
-  type CarConfiguration,
-} from './configuratorStore';
+import { describe, it, expect } from 'vitest'
+import { calculateTotalPrice, calculateInstallment, formatPrice, CarConfiguration, useConfiguratorStore } from './configuratorStore'
 
-const baseConfig = (overrides: Partial<CarConfiguration> = {}): CarConfiguration => ({
-  exteriorColor: 'glacier-blue',
-  interiorColor: 'carbon-black',
-  wheelType: 'aero',
-  optionals: [],
-  ...overrides,
-});
+describe('configuratorStore pure functions', () => {
+  describe('calculateTotalPrice', () => {
+    it('should calculate the base price correctly', () => {
+      const config: CarConfiguration = {
+        exteriorColor: 'glacier-blue',
+        interiorColor: 'carbon-black',
+        wheelType: 'aero',
+        optionals: [],
+      }
+      expect(calculateTotalPrice(config)).toBe(40000)
+    })
 
-describe('calculateTotalPrice', () => {
-  it('retorna o preço base para aero sem opcionais', () => {
-    // Arrange
-    const config = baseConfig({ wheelType: 'aero', optionals: [] });
+    it('should add sport wheels price correctly', () => {
+      const config: CarConfiguration = {
+        exteriorColor: 'glacier-blue',
+        interiorColor: 'carbon-black',
+        wheelType: 'sport',
+        optionals: [],
+      }
+      expect(calculateTotalPrice(config)).toBe(42000)
+    })
 
-    // Act
-    const total = calculateTotalPrice(config);
+    it('should add optionals price correctly', () => {
+      const config: CarConfiguration = {
+        exteriorColor: 'glacier-blue',
+        interiorColor: 'carbon-black',
+        wheelType: 'aero',
+        optionals: ['precision-park', 'flux-capacitor'],
+      }
+      // 40000 + 5500 + 5000 = 50500
+      expect(calculateTotalPrice(config)).toBe(50500)
+    })
+  })
 
-    // Assert
-    expect(total).toBe(40000);
-  });
+  describe('calculateInstallment', () => {
+    it('should calculate 12x installments with 2% monthly interest correctly', () => {
+      const total = 40000
+      const installment = calculateInstallment(total)
+      expect(installment).toBe(3782.38)
+    })
+  })
 
-  it('soma sport wheels e um opcional ao preço base', () => {
-    // Arrange — base 40000 + sport 2000 + precision-park 5500
-    const config = baseConfig({
-      wheelType: 'sport',
-      optionals: ['precision-park'],
-    });
+  describe('formatPrice', () => {
+    it('should format price correctly to BRL currency', () => {
+      const formatted = formatPrice(40000)
+      // Remove whitespace characters (including non-breaking spaces) for simpler assertion
+      expect(formatted.replace(/\s/g, '')).toBe('R$40.000,00')
+    })
+  })
+})
 
-    // Act
-    const total = calculateTotalPrice(config);
+describe('configuratorStore actions', () => {
+  it('should toggle an optional feature correctly', () => {
+    // Reset state before test
+    useConfiguratorStore.getState().resetConfiguration()
 
-    // Assert
-    expect(total).toBe(47500);
-  });
-});
+    // Initial state has no optionals
+    expect(useConfiguratorStore.getState().configuration.optionals).toEqual([])
 
-describe('calculateInstallment', () => {
-  it('calcula a parcela de 40000 com 2 casas decimais', () => {
-    // Arrange
-    const total = 40000;
+    // Toggle a feature (should add it)
+    useConfiguratorStore.getState().toggleOptional('precision-park')
+    expect(useConfiguratorStore.getState().configuration.optionals).toContain('precision-park')
 
-    // Act
-    const installment = calculateInstallment(total);
+    // Toggle the same feature (should remove it)
+    useConfiguratorStore.getState().toggleOptional('precision-park')
+    expect(useConfiguratorStore.getState().configuration.optionals).not.toContain('precision-park')
+  })
 
-    // Assert — 12x com juros compostos de 2% a.m.
-    expect(installment).toBe(3782.38);
-    expect(Number.isInteger(installment * 100)).toBe(true);
-  });
-});
+  it('should handle login logic depending on previous orders', () => {
+    useConfiguratorStore.setState({ orders: [] })
+    useConfiguratorStore.getState().logout()
 
-describe('formatPrice', () => {
-  it('formata valor em BRL (pt-BR)', () => {
-    // Arrange
-    const value = 40000;
+    // Login fails if there are no orders for the email
+    const loginResult1 = useConfiguratorStore.getState().login('test@example.com')
+    expect(loginResult1).toBe(false)
+    expect(useConfiguratorStore.getState().currentUserEmail).toBeNull()
 
-    // Act
-    const formatted = formatPrice(value);
+    // Add a mock order
+    useConfiguratorStore.setState({
+      orders: [
+        {
+          id: '1',
+          configuration: { exteriorColor: 'glacier-blue', interiorColor: 'carbon-black', wheelType: 'aero', optionals: [] },
+          totalPrice: 40000,
+          customer: { name: 'Test', surname: 'User', email: 'test@example.com', phone: '', cpf: '', store: '' },
+          paymentMethod: 'avista',
+          status: 'APROVADO',
+          createdAt: new Date().toISOString()
+        }
+      ]
+    })
 
-    // Assert
-    expect(formatted).toMatch(/R\$/);
-    expect(formatted).toContain('40.000');
-  });
-});
+    // Login succeeds now
+    const loginResult2 = useConfiguratorStore.getState().login('test@example.com')
+    expect(loginResult2).toBe(true)
+    expect(useConfiguratorStore.getState().currentUserEmail).toBe('test@example.com')
+  })
+})
