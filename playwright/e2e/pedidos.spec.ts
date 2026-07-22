@@ -1,8 +1,9 @@
 import { test, expect } from '../support/fixtures'
 import { generateOrderCode } from '../support/helpers'
-import type { OrderDetails } from '../support/actions/orderLookupActions'
+import type { OrderDetails } from '../support/types'
 import { insertOrder, deleteOrderByNumber} from '../support/database/orderRepository'
-import crypto from 'crypto'
+
+import testData from '../support/fixtures/orders.json' with { type: 'json' }
 
 test.describe('Consulta de Pedidos', () => {
 
@@ -11,35 +12,10 @@ test.describe('Consulta de Pedidos', () => {
   })
 
   test('deve consultar um pedido aprovado', async ({ app }) => {
-    const code = generateOrderCode()
-    const order: OrderDetails = {
-      number: code,
-      status: 'APROVADO',
-      color: 'Glacier Blue',
-      wheels: 'aero Wheels',
-      customer: {
-        name: 'JESSICA DA SILVA',
-        email: 'jessicaespindoladasilva5@gmail.com',
-      },
-      payment: 'À Vista',
-    }
+    const order : OrderDetails = testData.aprovado as OrderDetails //massa de dados externalizada
 
-    await insertOrder({
-    id: crypto.randomUUID(),
-    order_number: code,
-    color: 'glacier-blue',
-    wheel_type: 'aero',
-    customer_name: order.customer.name,
-    customer_email: order.customer.email,
-    customer_phone: '(11) 99999-9999',
-    customer_cpf: '12345678900',
-    payment_method: 'avista',
-    total_price: 40000,
-    status: order.status,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    optionals: [],
-    })
+    await deleteOrderByNumber(order.number) //deletar antes de inserir
+    await insertOrder(order)
 
     await app.orderLookup.searchOrder(order.number)
     await app.orderLookup.validateOrderDetails(order)
@@ -47,75 +23,22 @@ test.describe('Consulta de Pedidos', () => {
   })
 
   test('deve consultar um pedido reprovado', async ({ app }) => {
-    const code = generateOrderCode()
-    const order: OrderDetails = {
-      number: code,
-      status: 'REPROVADO',
-      color: 'Midnight Black',
-      wheels: 'sport Wheels',
-      customer: {
-        name: 'Adamastor Limas',
-        email: 'adamastorlimas@gmail.com',
-        document: '35471136012',
-        phone: '(11) 99999-9999',
-      },
-      payment: 'À Vista',
-      total_price: '40000',
-    }
+    const order : OrderDetails = testData.reprovado as OrderDetails
 
-    await insertOrder({
-    id: crypto.randomUUID(),
-    order_number: code,
-    color: 'midnight-black',
-    wheel_type: 'sport',
-    customer_name: order.customer.name,
-    customer_email: order.customer.email,
-    customer_phone: order.customer.phone,
-    customer_cpf: '35471136012',
-    payment_method: 'avista',
-    total_price: 40000,
-    status: order.status,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    optionals: [],
-    })
+    await deleteOrderByNumber(order.number)
+    await insertOrder(order)
+
     await app.orderLookup.searchOrder(order.number)
     await app.orderLookup.validateOrderDetails(order)
     await app.orderLookup.validateStatusBadge(order.status)
   })
 
   test('deve consultar um pedido em análise', async ({ app }) => {
-    const code = generateOrderCode()
-    const order: OrderDetails = {
-      number: code,
-      status: 'EM_ANALISE',
-      color: 'Lunar White',
-      wheels: 'aero Wheels',
-      customer: {
-        name: 'Paola Alcântara',
-        email: 'paolaalc@gmail.com',
-        document: '12345678900',
-        phone: '(11) 99999-9999',
-      },
-      payment: 'À Vista',
-      total_price: '40000',
-    }
-    await insertOrder({
-      id: crypto.randomUUID(),
-      order_number: code,
-      color: 'lunar-white',
-      wheel_type: 'aero',
-      customer_name: order.customer.name,
-      customer_email: order.customer.email,
-      customer_phone: '(11) 99999-9999',
-      customer_cpf: '12345678900',
-      payment_method: 'avista',
-      total_price: 40000,
-      status: order.status,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      optionals: [],
-    })
+    const order : OrderDetails = testData.emAnalise as OrderDetails
+
+    await deleteOrderByNumber(order.number)
+    await insertOrder(order)
+
     await app.orderLookup.searchOrder(order.number)
     await app.orderLookup.validateOrderDetails(order)
     await app.orderLookup.validateStatusBadge(order.status)
@@ -135,10 +58,9 @@ test.describe('Consulta de Pedidos', () => {
     await app.orderLookup.validateOrderNotFound()
   })
 
-  test('deve manter o botão de busca desabilitado com campo vazio ou apenas espaços', async ({ app, page }) => {
-
+  test('deve manter o botão de busca desabilitado com campo vazio ou apenas espaços', async ({ app }) => {
     const button = app.orderLookup.elements.searchButton
-    await expect(button).toBeDisabled
+    await expect(button).toBeDisabled()
 
     await app.orderLookup.elements.orderInput.fill('   ')
     await expect(button).toBeDisabled()

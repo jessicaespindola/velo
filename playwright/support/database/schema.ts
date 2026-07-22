@@ -9,9 +9,9 @@ export interface OrderTable {
     customer_cpf: string
     payment_method: string
     status: string
-    total_price: number
+    total_price: string
     created_at: Date | string
-    updated_at: Date |  string
+    updated_at: Date | string
     optionals: string[]
 }
 
