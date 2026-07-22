@@ -1,10 +1,16 @@
 import { Page, expect } from '@playwright/test'
-import type { CheckoutFormData } from '../types'
+
+const ORDER_RESULT = {
+  APROVADO: 'Pedido Aprovado!',
+  EM_ANALISE: 'Pedido em Análise!',
+  REPROVADO: 'Pedido Reprovado',
+} as const
+
+type OrderResultStatus = keyof typeof ORDER_RESULT
+
 export function createCheckoutActions(page: Page) {
 
   const terms = page.getByTestId('checkout-terms')
-
-
 
   const alerts = {
     name: page.getByTestId('checkout-name-error'),
@@ -57,6 +63,16 @@ export function createCheckoutActions(page: Page) {
       await expect(page.getByTestId('payment-avista')).toContainText(price)
     },
 
+    async selectFinancedPayment() {
+      await page.getByTestId('payment-financiamento').click()
+    },
+    async selectPaymentMethod(method: string) {
+      await page.getByRole('button', { name: new RegExp(method, 'i') }).click()
+    },
+
+    async fillDownPayment(value: string) {
+      await page.getByTestId('input-entry-value').fill(value)
+    },
     async acceptTerms() {
       await terms.check()
     },
@@ -73,7 +89,10 @@ export function createCheckoutActions(page: Page) {
       await expect(page).toHaveURL(/\/order/)
       await expect(page.getByRole('heading', { name: 'Finalizar Pedido' })).toBeVisible()
     },
-
+    async expectResult(status: OrderResultStatus) {
+      await expect(page).toHaveURL(/\/success/)
+      await expect(page.getByTestId('success-status')).toHaveText(ORDER_RESULT[status])
+    },
     async expectOrderApproved(data: {
       fullName: string
       email: string
@@ -81,7 +100,7 @@ export function createCheckoutActions(page: Page) {
       total: string
     }) {
       await expect(page).toHaveURL(/\/success/)
-      await expect(page.getByTestId('success-status')).toHaveText('Pedido Aprovado!')
+      await expect(page.getByTestId('success-status')).toHaveText(ORDER_RESULT.APROVADO)
       await expect(page.getByTestId('order-id')).toHaveText(/^VLO-[A-Z0-9]{6}$/)
       await expect(page.getByText(data.fullName)).toBeVisible()
       await expect(page.getByText(data.email)).toBeVisible()
