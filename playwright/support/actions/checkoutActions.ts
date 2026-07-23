@@ -13,13 +13,13 @@ export function createCheckoutActions(page: Page) {
   const terms = page.getByTestId('checkout-terms')
 
   const alerts = {
-    name: page.getByTestId('checkout-name-error'),
-    lastname: page.getByTestId('checkout-surname-error'),
-    email: page.getByTestId('checkout-email-error'),
-    phone: page.getByTestId('checkout-phone-error'),
-    document: page.getByTestId('checkout-document-error'),
-    store: page.getByTestId('checkout-store-error'),
-    terms: page.getByTestId('checkout-terms-error'),
+    name: page.getByTestId('error-name'),
+    lastname: page.getByTestId('error-lastname'),
+    email: page.getByTestId('error-email'),
+    phone: page.getByTestId('error-phone'),
+    document: page.getByTestId('error-document'),
+    store: page.getByTestId('error-store'),
+    terms: page.getByTestId('error-terms'),
   }
 
   return {
@@ -44,10 +44,10 @@ export function createCheckoutActions(page: Page) {
       document: string
     }) {
       await page.getByTestId('checkout-name').fill(data.name)
-      await page.getByTestId('checkout-surname').fill(data.lastname)
+      await page.getByTestId('checkout-lastname').fill(data.lastname)
       await page.getByTestId('checkout-email').fill(data.email)
       await page.getByTestId('checkout-phone').fill(data.phone)
-      await page.getByTestId('checkout-cpf').fill(data.document)
+      await page.getByTestId('checkout-document').fill(data.document)
     },
 
     async selectStore(storeName: string) {
@@ -78,13 +78,20 @@ export function createCheckoutActions(page: Page) {
     },
 
     async submit() {
+      // Evita que type="email" bloqueie o submit antes do Zod
+      await page.locator('form').evaluate((form: HTMLFormElement) => {
+        form.noValidate = true
+      })
       await page.getByRole('button', { name: 'Confirmar Pedido' }).click()
     },
 
-    async expectValidationError(message: string) {
-      await expect(page.locator(`p:text-is("${message}")`)).toBeVisible()
+    async expectValidationError(
+      field: keyof typeof alerts,
+      message: string,
+    ) {
+      await expect(alerts[field]).toBeVisible()
+      await expect(alerts[field]).toHaveText(message)
     },
-
     async expectStillOnCheckout() {
       await expect(page).toHaveURL(/\/order/)
       await expect(page.getByRole('heading', { name: 'Finalizar Pedido' })).toBeVisible()

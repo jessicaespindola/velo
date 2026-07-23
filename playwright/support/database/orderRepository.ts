@@ -13,6 +13,13 @@ export function normalizeValue(value: string) {
     .toLowerCase() //converte para minúsculas
 }
 
+/** Converte rótulo da massa (ex: "À Vista") para o valor persistido pela app (`avista` | `financiamento`). */
+export function toPaymentMethod(payment: string): 'avista' | 'financiamento' {
+    const key = normalizeValue(payment).replace(/\s+/g, '')
+    if (key.startsWith('financ')) return 'financiamento'
+    return 'avista'
+}
+
 export async function insertOrder(order: OrderDetails) {
 
     const data: OrderTable = {
@@ -24,7 +31,7 @@ export async function insertOrder(order: OrderDetails) {
         customer_email: order.customer.email,
         customer_phone: order.customer.phone,
         customer_cpf: order.customer.document,
-        payment_method: normalizeValue(order.payment),
+        payment_method: toPaymentMethod(order.payment),
         total_price: order.total_price,
         status: order.status,
         created_at: new Date().toISOString(),

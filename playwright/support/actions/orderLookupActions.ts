@@ -1,12 +1,21 @@
 import { Page, expect } from '@playwright/test'
-import type { OrderDetails, OrderStatus } from '../types'
 
-export type { OrderDetails, OrderStatus } from '../types'
+type OrderStatus = 'APROVADO' | 'REPROVADO' | 'EM_ANALISE'
+
+export type OrderDetails = {
+  number: string
+  status: OrderStatus
+  color: string
+  wheels: string
+  payment: string
+  customer: { name: string, document: string, email: string, phone: string },
+  total_price: string
+}
 
 export function createOrderLookupActions(page: Page) {
 
-  const orderInput = page.getByRole('textbox', {name: 'Número do Pedido'})
-  const searchButton = page.getByRole('button', {name: 'Buscar Pedido'})
+  const orderInput = page.getByRole('textbox', { name: 'Número do Pedido' })
+  const searchButton = page.getByRole('button', { name: 'Buscar Pedido' })
 
   return {
 

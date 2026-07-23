@@ -1,11 +1,12 @@
 import { test, expect } from '../support/fixtures'
 import { generateOrderCode } from '../support/helpers'
-import type { OrderDetails } from '../support/types'
+import type { OrderDetails } from '../support/actions/orderLookupActions'
 import { insertOrder, deleteOrderByNumber} from '../support/database/orderRepository'
 
 import testData from '../support/fixtures/orders.json' with { type: 'json' }
 
 test.describe('Consulta de Pedidos', () => {
+
 
   test.beforeEach(async ({ app }) => {
     await app.orderLookup.open()
@@ -15,7 +16,7 @@ test.describe('Consulta de Pedidos', () => {
     const order : OrderDetails = testData.aprovado as OrderDetails //massa de dados externalizada
 
     await deleteOrderByNumber(order.number) //deletar antes de inserir
-    await insertOrder(order)
+    await insertOrder(order) //inserir o pedido na base de dados
 
     await app.orderLookup.searchOrder(order.number)
     await app.orderLookup.validateOrderDetails(order)
