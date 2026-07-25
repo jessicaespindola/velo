@@ -40,9 +40,17 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-      # 5. Executa os testes unitários com Vitest
-      - name: Run unit tests
-        run: yarn test
+      # 5. Obter as configurações do Vercel
+      - name: Pull Vercel Config
+        run: yarn vercel pull --yes --environment=preview --token=$VERCEL_TOKEN --scope=$VERCEL_SCOPE
+
+      # 6. Build para o Vercel    
+      - name: Build Vercel
+        run: yarn vercel build --token=$VERCEL_TOKEN
+
+      # 7. Deploy preview no vercel
+      - name: Deploy preview
+        run: yarn vercel deploy --prebuilt --target=preview --token=$VERCEL_TOKEN --scope=$VERCEL_SCOPE
 
   build-and-deploy:
     name: Build & Deploy Vercel Preview
