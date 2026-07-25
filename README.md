@@ -110,6 +110,41 @@ Vite substitui `VITE_*` no JavaScript no momento do `vite build`. O artefato de 
 
 No GitHub Actions, o secret `DATABASE_URL` deve apontar **somente** para o Postgres de preview.
 
+### 5. Validação do isolamento (cenário executado)
+
+O pipeline verde sozinho não prova o isolamento. O cenário abaixo confirma que preview e produção leem **bancos diferentes**.
+
+#### Pré-condição
+
+1. Criar (ou inserir) um pedido **somente** no Supabase de preview (`owgvnkbvtiuegmkjenkh`), por exemplo pelo Table Editor.
+2. Anotar o número do pedido. No cenário executado: **`VLO-J892VY`**.
+3. Confirmar no Table Editor de **produção** (`hsbmmnsilauhstfocxqs`) que esse número **não** existe.
+
+#### Passo A — Consultar na preview
+
+1. Abrir a URL de preview do último CD (job *Build & Deploy Vercel Preview* → step *Deploy preview*).  
+   Exemplo do run validado: deployment de preview em `*.vercel.app` (URL muda a cada deploy; copie do log, sem digitar à mão — `l` e `1` se confundem).
+2. Ir em **Consultar Pedido** (`/lookup`).
+3. Buscar `VLO-J892VY`.
+4. **Resultado esperado:** pedido encontrado (ex.: status APROVADO).
+5. DevTools → **Network** → filtrar `supabase` → na response, `sb-project-ref` deve ser **`owgvnkbvtiuegmkjenkh`**.
+
+#### Passo B — Consultar em produção
+
+1. Abrir a URL estável de produção: `https://velo-jessicaespindola.vercel.app/lookup`.
+2. Buscar o **mesmo** número: `VLO-J892VY`.
+3. **Resultado esperado:** mensagem **Pedido não encontrado**.
+4. DevTools → **Network** → filtrar `supabase` → `sb-project-ref` deve ser **`hsbmmnsilauhstfocxqs`**.
+
+#### Critério de sucesso
+
+| Ambiente | Pedido `VLO-J892VY` | `sb-project-ref` |
+|----------|---------------------|------------------|
+| Preview | Encontrado | `owgvnkbvtiuegmkjenkh` |
+| Produção | Não encontrado | `hsbmmnsilauhstfocxqs` |
+
+Se os dois lados baterem, o isolamento está validado: dado criado no preview **não** aparece em produção, e cada front aponta para o Supabase do seu ambiente.
+
 ---
 
 ## Estrutura Principal

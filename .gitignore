@@ -32,3 +32,6 @@ dist-ssr
 
 .vercel
 .env*
+
+# Secrets / credenciais locais (não versionar)
+docs/db-password.txt
