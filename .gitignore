@@ -35,3 +35,7 @@ dist-ssr
 
 # Secrets / credenciais locais (não versionar)
 docs/db-password.txt
+
+# Supabase CLI local state (não versionar)
+supabase/.temp
+supabase/.branches
