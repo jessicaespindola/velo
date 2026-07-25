@@ -42,44 +42,73 @@ Acesse: `http://localhost:5173`
 
 ## Configuração do Supabase
 
-### 1. Criar Projeto
+Existem **dois** projetos Supabase. O `project-ref` é o ID do projeto (Settings → General → Reference ID).
 
-1. Acesse [supabase.com](https://supabase.com) e crie uma conta
-2. Clique em **New Project**
-3. Escolha um nome e senha para o banco
-4. Aguarde a criação (~2 minutos)
+| Ambiente | Projeto | project-ref |
+|----------|---------|-------------|
+| **Produção** | Velô | `hsbmmnsilauhstfocxqs` |
+| **Preview** (E2E / deploys de preview) | velo-sprint-preview | `owgvnkbvtiuegmkjenkh` |
 
-### 2. Variáveis de Ambiente
+> Sempre confira o `--project-ref` antes de `db push` ou `functions deploy`. Apontar para o ref errado aplica mudanças no banco errado.
 
-Crie o arquivo `.env` na raiz do projeto:
+### 1. Variáveis de Ambiente (local)
+
+Crie o arquivo `.env` na raiz. Para desenvolvimento e E2E locais, prefira o **preview** para não poluir produção:
 
 ```env
-VITE_SUPABASE_PROJECT_ID="seu_project_id"
-VITE_SUPABASE_PUBLISHABLE_KEY="sua_chave_anon_publica"
-VITE_SUPABASE_URL="https://seu_project_id.supabase.co"
+VITE_SUPABASE_PROJECT_ID="owgvnkbvtiuegmkjenkh"
+VITE_SUPABASE_PUBLISHABLE_KEY="sua_chave_publishable_do_preview"
+VITE_SUPABASE_URL="https://owgvnkbvtiuegmkjenkh.supabase.co"
+
+# Usado pelos E2E (insert/delete direto no Postgres). Deve ser o pooler do PREVIEW.
+DATABASE_URL="postgresql://postgres.owgvnkbvtiuegmkjenkh:SENHA@aws-0-sa-east-1.pooler.supabase.com:5432/postgres"
 ```
 
-> Encontre essas informações em: **Project Settings → API**
+Chaves em: **Project Settings → API**. Connection string em: **Project Settings → Database**.
 
-### 3. Deploy (banco + functions)
+### 2. Deploy (banco + functions)
 
 ```bash
-# Instalar CLI
-npm install -g supabase
-yarn add supabase -D
-
-# Login e vincular projeto
 yarn supabase login
-yarn supabase link --project-ref hsbmmnsilauhstfocxqs
 
-# Aplicar migrações (cria tabelas e RLS)
+# --- Preview ---
+yarn supabase link --project-ref owgvnkbvtiuegmkjenkh
 yarn supabase db push
+yarn supabase functions deploy
+# Mock de crédito no preview (opcional, recomendado para E2E):
+yarn supabase secrets set USE_MOCK_CREDIT_ANALYSIS=true --project-ref owgvnkbvtiuegmkjenkh
 
-# Deploy das Edge Functions
+# --- Produção (só quando for intencional) ---
+yarn supabase link --project-ref hsbmmnsilauhstfocxqs
+yarn supabase db push
 yarn supabase functions deploy
 ```
 
-Pronto! O banco e as functions estarão configurados.
+### 3. Variáveis na Vercel
+
+Configure escopos **separados** (não “All Environments”):
+
+| Variável | Production | Preview |
+|----------|------------|---------|
+| `VITE_SUPABASE_URL` | projeto Velô (prod) | velo-sprint-preview |
+| `VITE_SUPABASE_PROJECT_ID` | `hsbmmnsilauhstfocxqs` | `owgvnkbvtiuegmkjenkh` |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | key de prod | key de preview |
+
+O CD faz `vercel pull --environment=preview` no job de preview e `--environment=production` no job de produção, então cada build embute o Supabase correto.
+
+### 4. Continuous Deployment e por que não usamos `promote`
+
+Fluxo em [`.github/workflows/cd.yml`](.github/workflows/cd.yml):
+
+1. Testes unitários  
+2. Build + deploy **preview** (vars Supabase de preview)  
+3. E2E Playwright contra a URL de preview (`BASE_URL` + secret `DATABASE_URL` do Postgres de preview)  
+4. **Rebuild + deploy production** (vars Supabase de produção)
+
+**Por que rebuild em vez de `vercel promote`?**  
+Vite substitui `VITE_*` no JavaScript no momento do `vite build`. O artefato de preview já contém a URL/key do Supabase de preview. Promover esse mesmo build faria a produção continuar falando com o banco de preview. O job de produção gera um artefato novo no mesmo commit, com as variáveis de Production.
+
+No GitHub Actions, o secret `DATABASE_URL` deve apontar **somente** para o Postgres de preview.
 
 ---
 

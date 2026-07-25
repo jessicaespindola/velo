@@ -1,4 +1,6 @@
-project_id = "ylhtbnzypxtmlvvhbtyo"
+﻿# Confirme o --project-ref antes de db push / functions deploy.
+# Produção (link atual): hsbmmnsilauhstfocxqs | Preview: owgvnkbvtiuegmkjenkh
+project_id = "hsbmmnsilauhstfocxqs"
 
 [functions.credit-analysis]
 verify_jwt = false
