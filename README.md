@@ -88,27 +88,29 @@ yarn supabase functions deploy
 
 Configure escopos **separados** (não “All Environments”):
 
-| Variável | Production | Preview |
-|----------|------------|---------|
-| `VITE_SUPABASE_URL` | projeto Velô (prod) | velo-sprint-preview |
+| Variável | Production (projeto **Velô**) | Preview (projeto **velo-sprint-preview**) |
+|----------|-------------------------------|-------------------------------------------|
+| `VITE_SUPABASE_URL` | `https://hsbmmnsilauhstfocxqs.supabase.co` | `https://owgvnkbvtiuegmkjenkh.supabase.co` |
 | `VITE_SUPABASE_PROJECT_ID` | `hsbmmnsilauhstfocxqs` | `owgvnkbvtiuegmkjenkh` |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | key de prod | key de preview |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | publishable key do **Velô** | publishable key do **velo-sprint-preview** |
 
 O CD faz `vercel pull --environment=preview` no job de preview e `--environment=production` no job de produção, então cada build embute o Supabase correto.
 
-### 4. Continuous Deployment e por que não usamos `promote`
+### 4. Continuous Deployment (rebuild no lugar de `promote`)
 
 Fluxo em [`.github/workflows/cd.yml`](.github/workflows/cd.yml):
 
 1. Testes unitários  
-2. Build + deploy **preview** (vars Supabase de preview)  
-3. E2E Playwright contra a URL de preview (`BASE_URL` + secret `DATABASE_URL` do Postgres de preview)  
-4. **Rebuild + deploy production** (vars Supabase de produção)
+2. Build + deploy **preview** (vars do projeto **velo-sprint-preview**)  
+3. E2E Playwright contra a URL de preview (`BASE_URL` + secret `DATABASE_URL` do Postgres de **velo-sprint-preview**)  
+4. **Rebuild + deploy production** (vars do projeto **Velô**)
 
 **Por que rebuild em vez de `vercel promote`?**  
-Vite substitui `VITE_*` no JavaScript no momento do `vite build`. O artefato de preview já contém a URL/key do Supabase de preview. Promover esse mesmo build faria a produção continuar falando com o banco de preview. O job de produção gera um artefato novo no mesmo commit, com as variáveis de Production.
+Vite substitui `VITE_*` no JavaScript no momento do `vite build`. O artefato de preview já contém a URL/key do **velo-sprint-preview**. Promover esse mesmo build faria a produção continuar falando com o banco de preview.
 
-No GitHub Actions, o secret `DATABASE_URL` deve apontar **somente** para o Postgres de preview.
+O rebuild com `--environment=production` é o equivalente seguro ao promote para SPA Vite: sobe o **mesmo commit** para produção com as variáveis do projeto **Velô**, garantindo que produção leia e escreva só no banco de produção.
+
+No GitHub Actions, o secret `DATABASE_URL` deve apontar **somente** para o Postgres de **velo-sprint-preview**.
 
 ### 5. Validação do isolamento (cenário executado)
 
@@ -116,9 +118,9 @@ O pipeline verde sozinho não prova o isolamento. O cenário abaixo confirma que
 
 #### Pré-condição
 
-1. Criar (ou inserir) um pedido **somente** no Supabase de preview (`owgvnkbvtiuegmkjenkh`), por exemplo pelo Table Editor.
+1. Criar (ou inserir) um pedido **somente** no projeto **velo-sprint-preview** (`owgvnkbvtiuegmkjenkh`), por exemplo pelo Table Editor.
 2. Anotar o número do pedido. No cenário executado: **`VLO-J892VY`**.
-3. Confirmar no Table Editor de **produção** (`hsbmmnsilauhstfocxqs`) que esse número **não** existe.
+3. Confirmar no Table Editor do projeto **Velô** (`hsbmmnsilauhstfocxqs`) que esse número **não** existe.
 
 #### Passo A — Consultar na preview
 
@@ -127,23 +129,34 @@ O pipeline verde sozinho não prova o isolamento. O cenário abaixo confirma que
 2. Ir em **Consultar Pedido** (`/lookup`).
 3. Buscar `VLO-J892VY`.
 4. **Resultado esperado:** pedido encontrado (ex.: status APROVADO).
-5. DevTools → **Network** → filtrar `supabase` → na response, `sb-project-ref` deve ser **`owgvnkbvtiuegmkjenkh`**.
+5. DevTools → **Network** → filtrar `supabase` → na response, `sb-project-ref` deve ser **`owgvnkbvtiuegmkjenkh`** (**velo-sprint-preview**).
 
 #### Passo B — Consultar em produção
 
 1. Abrir a URL estável de produção: `https://velo-jessicaespindola.vercel.app/lookup`.
 2. Buscar o **mesmo** número: `VLO-J892VY`.
 3. **Resultado esperado:** mensagem **Pedido não encontrado**.
-4. DevTools → **Network** → filtrar `supabase` → `sb-project-ref` deve ser **`hsbmmnsilauhstfocxqs`**.
+4. DevTools → **Network** → filtrar `supabase` → `sb-project-ref` deve ser **`hsbmmnsilauhstfocxqs`** (**Velô**).
 
 #### Critério de sucesso
 
-| Ambiente | Pedido `VLO-J892VY` | `sb-project-ref` |
-|----------|---------------------|------------------|
-| Preview | Encontrado | `owgvnkbvtiuegmkjenkh` |
-| Produção | Não encontrado | `hsbmmnsilauhstfocxqs` |
+| Ambiente | Projeto Supabase | Pedido `VLO-J892VY` | `sb-project-ref` |
+|----------|------------------|---------------------|------------------|
+| Preview | **velo-sprint-preview** | Encontrado | `owgvnkbvtiuegmkjenkh` |
+| Produção | **Velô** | Não encontrado | `hsbmmnsilauhstfocxqs` |
 
 Se os dois lados baterem, o isolamento está validado: dado criado no preview **não** aparece em produção, e cada front aponta para o Supabase do seu ambiente.
+
+### 6. Critérios de aceitação
+
+| # | Critério | Como foi atendido |
+|---|----------|-------------------|
+| 1 | Dois projetos Supabase distintos | **Velô** (produção) e **velo-sprint-preview** (preview/E2E) |
+| 2 | Pedido criado nos E2E não aparece no banco de produção | E2E usam preview (`BASE_URL` + `DATABASE_URL` de **velo-sprint-preview**); validado com `VLO-J892VY` |
+| 3 | Após o “promote”, produção lê/escreve no banco de produção | Atendido via **rebuild** de Production (não `vercel promote`), com vars do projeto **Velô** |
+| 4 | Testes E2E passam no pipeline | Job *Run E2E Tests* verde no CD após o deploy de preview |
+| 5 | Migrações e Edge Functions sincronizadas | `db push` + `functions deploy` nos dois projetos; mesma function `credit-analysis` |
+| 6 | Secrets/variáveis sensíveis fora do repositório | `.env` e `docs/db-password.txt` no `.gitignore` (não versionar); `DATABASE_URL` e tokens só em GitHub Secrets / Vercel Env |
 
 ---
 
