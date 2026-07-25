@@ -4,13 +4,13 @@ import { defineConfig, devices } from '@playwright/test';
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
  */
- import dotenv from 'dotenv';
- import path from 'path';
- import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
- const __filename = fileURLToPath(import.meta.url);
- const __dirname = path.dirname(__filename);
- dotenv.config({ path: path.resolve(__dirname, '.env') });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -38,10 +38,12 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('')`. */
-    baseURL: 'https://velo-5sjol5msz-jessica-espindola-da-silva.vercel.app/',
+    // caso não tenha definido a variável de ambiente BASE_URL, usa o localhost:5173
+    baseURL: process.env.BASE_URL || 'http://localhost:5173',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'retain-on-failure',
+    //trace: 'retain-on-failure',
+    trace: 'on',
 
     // quando zerado, pega o valor definido no timeout de cima.
     // Tempo máximo para ações interativas como click(), fill()
@@ -92,7 +94,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npm run dev',
+    command: 'yarn dev',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
   },
